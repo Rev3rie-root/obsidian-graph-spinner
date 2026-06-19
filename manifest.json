@@ -1,0 +1,9 @@
+{
+  "id": "obsidian-writing-block",
+  "name": "Writing Block",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "author": "Quincy",
+  "description": "When you have a writing block, look at your graph view and see it rotate.",
+  "isDesktopOnly": false
+}
