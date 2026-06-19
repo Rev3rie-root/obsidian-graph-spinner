@@ -1,7 +1,7 @@
 {
   "id": "obsidian-graph-spinner",
   "name": "Graph Spinner",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.0.0",
   "author": "Quincy",
   "description": "Graph Spinner is a lightweight Obsidian plugin that slowly rotates your graph view nodes in a smooth, galaxy-like motion — designed as a gentle visual aid for writers facing creative block.",
