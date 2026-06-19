@@ -1,4 +1,4 @@
-const { Plugin, Notice, PluginSettingTab, Setting } = require("obsidian");
+const { Plugin, Notice, PluginSettingTab, Setting, setIcon } = require("obsidian");
 
 const DEFAULT_SETTINGS = {
     speed: 0.0003
@@ -7,65 +7,88 @@ const DEFAULT_SETTINGS = {
 module.exports = class GraphSpinnerPlugin extends Plugin {
 
     async onload() {
-        await this.loadSettings();
-        this.addSettingTab(new GraphSpinnerSettingTab(this.app, this));
+    await this.loadSettings();
+    this.addSettingTab(new GraphSpinnerSettingTab(this.app, this));
 
-        new Notice("Graph Spinner loaded!");
+    new Notice("Graph Spinner loaded!");
 
-        this.angle = 0;
-        this.animating = true;
+    this.animating = false; 
+    this.rafId = null;
 
-        const tick = () => {
-            if (!this.animating) return;
+    const ribbonEl = this.addRibbonIcon("circle", "Toggle Graph Spinner", () => {
+        
+        // Toggle the animation state
+        this.animating = !this.animating;
 
-            const graphLeaves =
-                this.app.workspace.getLeavesOfType("graph");
+        if (this.animating) {
+            new Notice("Graph spinning activated!");
+            
+            // spinning state
+            setIcon(ribbonEl, "sparkle");
 
-            if (graphLeaves.length > 0) {
-                const renderer =
-                    graphLeaves[0].view && graphLeaves[0].view.renderer;
+            if (!this.rafId) {
+                this.rafId = requestAnimationFrame(this.tick);
+            }
+        } else {
+            new Notice("Graph spinning paused.");
+            
+            // paused state
+            setIcon(ribbonEl, "component");
 
-                if (renderer) {
-                    const nodes = renderer.nodes;
+            if (this.rafId) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+        }
+    });
 
-                    if (nodes && nodes.length > 0) {
+    // The animation loop remains exactly the same
+    this.tick = () => {
+        if (!this.animating) return;
 
-                        if (!this.originalPositions || this.originalPositions.length !== nodes.length) {
-                            this.angle = 0;
-                            this.originalPositions = nodes.map(n => ({ x: n.x, y: n.y }));
-                        }
+        const graphLeaves = this.app.workspace.getLeavesOfType("graph");
 
-                        let cx = 0;
-                        let cy = 0;
+        if (graphLeaves.length > 0) {
+            const renderer = graphLeaves[0].view && graphLeaves[0].view.renderer;
 
-                        for (let n of nodes) {
-                            cx += n.x;
-                            cy += n.y;
-                        }
+            if (renderer) {
+                const nodes = renderer.nodes;
 
-                        cx /= nodes.length;
-                        cy /= nodes.length;
+                if (nodes && nodes.length > 0) {
+					if (!this.lastNodeCount || this.lastNodeCount !== nodes.length) {
+    this.lastNodeCount = nodes.length;
+}
+                    let cx = 0;
+                    let cy = 0;
 
-                        this.angle += this.settings.speed;
-
-                        for (let i = 0; i < nodes.length; i++) {
-                            const ox = this.originalPositions[i].x - cx;
-                            const oy = this.originalPositions[i].y - cy;
-
-                            nodes[i].x = cx + ox * Math.cos(this.angle) - oy * Math.sin(this.angle);
-                            nodes[i].y = cy + ox * Math.sin(this.angle) + oy * Math.cos(this.angle);
-                        }
-
-                        renderer.changed();
+                    for (let n of nodes) {
+                        cx += n.x;
+                        cy += n.y;
                     }
+                    cx /= nodes.length;
+                    cy /= nodes.length;
+
+                    const angleDelta = this.settings.speed;
+                    const cos = Math.cos(angleDelta);
+                    const sin = Math.sin(angleDelta);
+
+                    for (let i = 0; i < nodes.length; i++) {
+                        const ox = nodes[i].x - cx;
+                        const oy = nodes[i].y - cy;
+
+                        nodes[i].x = cx + (ox * cos - oy * sin);
+                        nodes[i].y = cy + (ox * sin + oy * cos);
+                    }
+
+                    renderer.changed();
                 }
             }
+        }
 
-            this.rafId = requestAnimationFrame(tick);
-        };
+        this.rafId = requestAnimationFrame(this.tick);
+    };
+}
 
-        this.rafId = requestAnimationFrame(tick);
-    }
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
